@@ -832,21 +832,37 @@ const styles = `
       padding: 22px 0 6px;
       gap: 14px 14px;
     }
-    .eyebrow { grid-area: eyebrow; align-self: start; }
+    .eyebrow {
+      grid-area: eyebrow;
+      align-self: start;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 6px 10px;
+      gap: 5px;
+    }
+    .eyebrow svg { width: 12px; height: 12px; }
     .hero-copy { display: contents; }
-    .hero-copy h1 { grid-area: headline; margin: 0; font-size: 40px; line-height: 1.05; letter-spacing: -0.02em; }
+    .hero-copy h1 {
+      grid-area: headline;
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+      /* Drop manual line breaks on mobile so the headline flows into 3-4 lines naturally */
+    }
+    .hero-copy h1 br { display: none; }
     .hero-copy .lede { grid-area: lede; margin: 0; max-width: 100%; font-size: 14px; line-height: 1.5; }
     .hero-copy .controls { grid-area: controls; flex-direction: column; }
     .hero-copy .trust { grid-area: trust; }
     .hero-art {
       grid-area: art;
       order: initial;
-      height: 160px;
+      height: 110px;
       align-self: start;
       justify-self: end;
       width: 100%;
     }
-    .hero-art-img { width: 140px; height: 140px; }
+    .hero-art-img { width: 100px; height: 100px; }
     .field, .style-select, .reveal { width: 100%; }
     .steps {
       flex-wrap: wrap;
