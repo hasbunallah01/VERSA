@@ -841,12 +841,12 @@ const styles = `
     .hero-art {
       grid-area: art;
       order: initial;
-      height: 220px;
-      align-self: center;
+      height: 160px;
+      align-self: start;
       justify-self: end;
       width: 100%;
     }
-    .hero-art-img { width: 200px; height: 200px; }
+    .hero-art-img { width: 140px; height: 140px; }
     .field, .style-select, .reveal { width: 100%; }
     .steps {
       flex-wrap: wrap;
