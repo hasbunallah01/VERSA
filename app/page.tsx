@@ -61,9 +61,10 @@ export default function Home() {
             </span>
             <h1>
               Your wallet
-              <br />
-              has a soul.
-              <br />
+              <br className="br-desktop" />
+              {' '}has a soul.
+              <br className="br-desktop" />
+              {' '}
               <span className="gradient-text">VERSA paints it.</span>
             </h1>
             <p className="lede">
@@ -835,22 +836,22 @@ const styles = `
     .eyebrow {
       grid-area: eyebrow;
       align-self: start;
-      font-size: 9px;
-      letter-spacing: 0.1em;
-      padding: 6px 10px;
-      gap: 5px;
+      font-size: 8px;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      gap: 4px;
     }
-    .eyebrow svg { width: 12px; height: 12px; }
+    .eyebrow svg { width: 10px; height: 10px; }
     .hero-copy { display: contents; }
     .hero-copy h1 {
       grid-area: headline;
       margin: 0;
-      font-size: 26px;
-      line-height: 1.15;
+      font-size: 24px;
+      line-height: 1.2;
       letter-spacing: -0.015em;
-      /* Drop manual line breaks on mobile so the headline flows into 3-4 lines naturally */
+      /* Hide the desktop-only line breaks on mobile so the headline flows into 3-4 lines naturally */
     }
-    .hero-copy h1 br { display: none; }
+    .hero-copy h1 .br-desktop { display: none; }
     .hero-copy .lede { grid-area: lede; margin: 0; max-width: 100%; font-size: 14px; line-height: 1.5; }
     .hero-copy .controls { grid-area: controls; flex-direction: column; }
     .hero-copy .trust { grid-area: trust; }
@@ -864,6 +865,11 @@ const styles = `
     }
     .hero-art-img { width: 100px; height: 100px; }
     .field, .style-select, .reveal { width: 100%; }
+    .field { min-height: 46px; padding: 0 12px; }
+    .field input { height: 44px; font-size: 14px; }
+    .style-select { min-height: 46px; padding: 0 12px; }
+    .style-select select { height: 44px; font-size: 14px; }
+    .reveal { height: 46px; padding: 0 18px; font-size: 14px; }
     .steps {
       flex-wrap: wrap;
       gap: 10px;
