@@ -98,7 +98,7 @@ export function PortraitResult({
             <a
               className="btn btn-primary"
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                `My wallet's soul portrait: "${portrait.archetype}" 🎨 — painted by VERSA. What's yours?`,
+                `My wallet's soul portrait: "${portrait.archetype}" — painted by VERSA. What's yours?`,
               )}`}
               target="_blank"
               rel="noreferrer"
@@ -114,7 +114,7 @@ export function PortraitResult({
 
       <style jsx>{`
         .result {
-          margin: 8px 0 20px;
+          margin: 8px 0 24px;
           scroll-margin-top: 90px;
         }
         .composing {
