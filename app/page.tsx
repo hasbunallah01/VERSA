@@ -247,10 +247,15 @@ export default function Home() {
         <a href="#how"><DocIcon /><span>How it works</span></a>
         <a href="#examples"><PicIcon /><span>Examples</span></a>
         <a href="#top" className="tab-v" aria-label="Top">
-          <span className="tab-v-inner">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/versa-logo.png" alt="VERSA" width={56} height={56} draggable={false} />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/versa-logo.png"
+            alt="VERSA"
+            width={56}
+            height={56}
+            draggable={false}
+            className="tab-v-img"
+          />
         </a>
         <a href="#about"><InfoIcon /><span>About</span></a>
         <a href="#api"><ApiIcon /><span>API (Paid)</span></a>
@@ -818,64 +823,80 @@ const styles = `
   @media (max-width: 860px) {
     .hero {
       grid-template-columns: 1fr;
-      padding: 28px 0 6px;
-      gap: 8px;
+      grid-template-areas:
+        'eyebrow eyebrow'
+        'headline art'
+        'lede    art'
+        'controls controls'
+        'trust trust';
+      padding: 22px 0 6px;
+      gap: 14px 14px;
     }
-    h1 { font-size: 44px; }
-    .hero-art { order: -1; height: 280px; }
-    .hero-art-img { width: 260px; height: 260px; }
-    .controls { flex-direction: column; }
+    .eyebrow { grid-area: eyebrow; align-self: start; }
+    .hero-copy { display: contents; }
+    .hero-copy h1 { grid-area: headline; margin: 0; font-size: 40px; line-height: 1.05; letter-spacing: -0.02em; }
+    .hero-copy .lede { grid-area: lede; margin: 0; max-width: 100%; font-size: 14px; line-height: 1.5; }
+    .hero-copy .controls { grid-area: controls; flex-direction: column; }
+    .hero-copy .trust { grid-area: trust; }
+    .hero-art {
+      grid-area: art;
+      order: initial;
+      height: 220px;
+      align-self: center;
+      justify-self: end;
+      width: 100%;
+    }
+    .hero-art-img { width: 200px; height: 200px; }
     .field, .style-select, .reveal { width: 100%; }
-    .steps { flex-wrap: wrap; }
-    .step-wrap { flex: 1 1 44%; }
+    .steps {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .step-wrap {
+      flex: 1 1 calc(50% - 18px);
+      flex-direction: column;
+      gap: 0;
+    }
+    .step { width: 100%; }
     .step-arrow { display: none; }
     .banner { grid-template-columns: 1fr; gap: 18px; text-align: left; padding: 22px 22px; }
     .okx-mark { justify-content: flex-start; }
     .footer-top { grid-template-columns: 1fr 1fr; }
     .footer-illo { display: none; }
-    .main { padding-bottom: 100px; }
+    .main { padding-bottom: 110px; }
 
-    /* Bottom mobile tab */
+    /* Bottom mobile tab — flat, no white circle, just the V logo in center */
     .mobile-tab {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       position: fixed;
-      left: 12px; right: 12px; bottom: 12px;
-      background: rgba(255, 255, 255, 0.92);
+      left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.96);
       backdrop-filter: saturate(180%) blur(14px);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      box-shadow: 0 12px 40px rgba(30, 50, 120, 0.14);
+      border-top: 1px solid var(--line);
       z-index: 60;
       align-items: center;
       justify-items: center;
-      padding: 8px 6px;
+      padding: 10px 6px max(10px, env(safe-area-inset-bottom));
     }
     .mobile-tab a {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 3px;
+      gap: 4px;
       color: var(--ink-soft);
       font-size: 11px;
       font-weight: 500;
       padding: 4px 2px;
       text-align: center;
     }
-    .mobile-tab .tab-v {
-      grid-column: 3;
-      grid-row: 1;
-      align-self: start;
-      margin-top: -22px;
+    .mobile-tab a:global(.tab-v) {
+      padding: 0;
     }
-    .tab-v-inner {
-      width: 64px; height: 64px;
-      border-radius: 50%;
-      background: linear-gradient(180deg, #ffffff, #f4f6ff);
-      border: 1px solid #e6ebfa;
-      display: grid;
-      place-items: center;
-      box-shadow: 0 10px 26px rgba(78, 100, 255, 0.28);
+    .tab-v-img {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
     }
   }
 `;
