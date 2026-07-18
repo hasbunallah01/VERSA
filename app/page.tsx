@@ -118,8 +118,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="hero-art" aria-hidden="true">
-            <Logo size={420} withStage />
+          <div className="hero-art">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/versa-logo.png"
+              alt="VERSA — on-chain soul portrait"
+              className="hero-art-img"
+              width={520}
+              height={520}
+              draggable={false}
+            />
           </div>
         </section>
 
@@ -240,7 +248,8 @@ export default function Home() {
         <a href="#examples"><PicIcon /><span>Examples</span></a>
         <a href="#top" className="tab-v" aria-label="Top">
           <span className="tab-v-inner">
-            <Logo size={28} withStage />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/versa-logo.png" alt="VERSA" width={56} height={56} draggable={false} />
           </span>
         </a>
         <a href="#about"><InfoIcon /><span>About</span></a>
@@ -258,7 +267,7 @@ function SiteNav() {
   return (
     <nav className="nav">
       <div className="container nav-inner">
-        <Wordmark size={20} withStage />
+        <Wordmark size={20} />
         <div className="nav-links">
           <a href="#how">How it works</a>
           <a href="#examples">Examples</a>
@@ -614,11 +623,15 @@ const styles = `
 
   .hero-art {
     position: relative;
-    height: 460px;
+    height: 480px;
     display: grid;
     place-items: center;
   }
-  .hero-art :global(svg) {
+  .hero-art-img {
+    width: 480px;
+    height: 480px;
+    max-width: 100%;
+    object-fit: contain;
     filter: drop-shadow(0 30px 50px rgba(78, 100, 255, 0.18));
   }
 
@@ -810,7 +823,7 @@ const styles = `
     }
     h1 { font-size: 44px; }
     .hero-art { order: -1; height: 280px; }
-    .hero-art :global(svg) { width: 260px !important; height: 260px !important; }
+    .hero-art-img { width: 260px; height: 260px; }
     .controls { flex-direction: column; }
     .field, .style-select, .reveal { width: 100%; }
     .steps { flex-wrap: wrap; }
