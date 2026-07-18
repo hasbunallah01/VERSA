@@ -865,11 +865,11 @@ const styles = `
     }
     .hero-art-img { width: 100px; height: 100px; }
     .field, .style-select, .reveal { width: 100%; }
-    .field { min-height: 38px; padding: 0 10px; border-radius: 10px; }
-    .field input { height: 36px; font-size: 13px; }
-    .style-select { min-height: 38px; padding: 0 10px; border-radius: 10px; }
-    .style-select select { height: 36px; font-size: 13px; }
-    .reveal { height: 38px; padding: 0 16px; font-size: 13px; border-radius: 10px; }
+    .field { min-height: 40px; height: 40px; padding: 0 12px; border-radius: 10px; }
+    .field input { height: 40px; min-height: 40px; font-size: 14px; line-height: 1.2; padding: 0; }
+    .style-select { min-height: 40px; height: 40px; padding: 0 12px; border-radius: 10px; }
+    .style-select select { height: 40px; min-height: 40px; font-size: 14px; line-height: 1.2; padding: 0; }
+    .reveal { height: 40px; padding: 0 16px; font-size: 14px; border-radius: 10px; }
     .steps {
       flex-wrap: wrap;
       gap: 10px;
