@@ -48,12 +48,16 @@ const timedFetch = async (url: string): Promise<Response> => {
   }
 };
 
-const ETHERSCAN_BASE = 'https://api.etherscan.io/api';
+// Etherscan API V2 (V1 was deprecated 2025-08-15). V2 uses one base path
+// for all chains, selected via `chainid` (1 = Ethereum mainnet).
+// https://docs.etherscan.io/v2-migration
+const ETHERSCAN_BASE = 'https://api.etherscan.io/v2/api';
+const ETHERSCAN_CHAIN_ID = process.env.ETHERSCAN_CHAIN_ID ?? '1';
 
 const etherscan = async <T>(params: Record<string, string>): Promise<T | null> => {
   const key = process.env.ETHERSCAN_API_KEY;
   if (!key) return null;
-  const qs = new URLSearchParams({ ...params, apikey: key }).toString();
+  const qs = new URLSearchParams({ chainid: ETHERSCAN_CHAIN_ID, ...params, apikey: key }).toString();
   try {
     const res = await timedFetch(`${ETHERSCAN_BASE}?${qs}`);
     if (!res.ok) return null;
