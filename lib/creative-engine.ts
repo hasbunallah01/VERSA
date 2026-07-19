@@ -80,7 +80,8 @@ const describeSignals = (s: WalletSignals): string => {
   if (s.tokens.length > 0) lines.push(`tokens touched recently: ${s.tokens.join(', ')}`);
   lines.push(`nft transfers in sample: ${s.nftTransfers}`);
   if (s.balanceEth !== null) lines.push(`eth balance: ${s.balanceEth.toFixed(4)}`);
-  if ((s.txCount ?? 0) === 0) lines.push('NOTE: wallet appears empty/new — use "The Unwritten" archetype.');
+  if (s.txCount === 0) lines.push('NOTE: wallet appears empty/new — use "The Unwritten" archetype.');
+  else if (s.txCount === null) lines.push('NOTE: transaction count unavailable; do not assume the wallet is empty — describe it as guarded/private rather than unwritten.');
   return lines.join('\n');
 };
 

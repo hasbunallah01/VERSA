@@ -74,31 +74,35 @@ type EtherscanTx = {
 
 type EtherscanTokenTx = { tokenSymbol: string };
 
-/** Public RPC fallback — no key required. */
+const RPC_ENDPOINTS = [
+  process.env.ETH_RPC_URL,
+  'https://eth.llamarpc.com',
+  'https://rpc.ankr.com/eth',
+  'https://ethereum.publicnode.com',
+].filter((u): u is string => Boolean(u));
+
+/** Public RPC fallback — tries each configured endpoint in order. */
 const rpc = async (method: string, params: unknown[]): Promise<string | null> => {
-  const url = process.env.ETH_RPC_URL ?? 'https://eth.llamarpc.com';
-  try {
-    const res = await timedFetch(url);
-    void res; // llamarpc needs POST; do a proper POST below.
-  } catch {
-    /* fallthrough */
+  for (const url of RPC_ENDPOINTS) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+        signal: controller.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) continue;
+      const body = (await res.json()) as { result?: string; error?: unknown };
+      if (body.result === undefined || body.error) continue;
+      return body.result;
+    } catch {
+      // try the next endpoint
+    }
   }
-  try {
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-      signal: controller.signal,
-    });
-    clearTimeout(t);
-    if (!res.ok) return null;
-    const body = (await res.json()) as { result?: string };
-    return body.result ?? null;
-  } catch {
-    return null;
-  }
+  return null;
 };
 
 /**
