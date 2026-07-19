@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef, useState } from 'react';
+
 export type Portrait = {
   archetype: string;
   portrait: string;
@@ -18,6 +20,22 @@ export type Portrait = {
 
 const short = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
 
+/** VERSA's X handle, tagged in shares. Update if the brand gets its own account. */
+const VERSA_HANDLE = 'HayBeeservices';
+
+const buildShareText = (p: Portrait & { address: string }): string => {
+  const topTraits = p.traits.slice(0, 2).join(' · ');
+  return [
+    `My wallet's soul portrait: "${p.archetype}"`,
+    topTraits ? `(${topTraits})` : null,
+    `— palette "${p.palette.name}" 🎨`,
+    `Painted by @${VERSA_HANDLE}'s VERSA. What's yours?`,
+    '#VERSA #OKXAI',
+  ]
+    .filter(Boolean)
+    .join(' ');
+};
+
 export function PortraitResult({
   loading,
   error,
@@ -29,6 +47,32 @@ export function PortraitResult({
   portrait: (Portrait & { address: string }) | null;
   onReset: () => void;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const download = async () => {
+    if (!cardRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(cardRef.current, {
+        pixelRatio: 2,
+        backgroundColor: '#fbfcff',
+        cacheBust: true,
+      });
+      const link = document.createElement('a');
+      const slug = portrait ? portrait.archetype.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'portrait';
+      link.download = `versa-${slug}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch {
+      // Downloading is a nice-to-have; fail quietly rather than
+      // interrupting a person who just wants to share on X instead.
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <section className="result">
       {loading && (
@@ -47,7 +91,7 @@ export function PortraitResult({
       )}
 
       {!loading && portrait && (
-        <article className="card">
+        <article className="card" ref={cardRef}>
           <header className="card-head">
             <span className="card-eyebrow">SOUL PORTRAIT</span>
             <span className="card-addr">{short(portrait.address)}</span>
@@ -94,17 +138,22 @@ export function PortraitResult({
             <p>{portrait.artPrompt}</p>
           </details>
 
+          <div className="card-brand">
+            <span className="brand-v">V</span> Made with VERSA · versa-bice.vercel.app
+          </div>
+
           <div className="card-actions">
             <a
               className="btn btn-primary"
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                `My wallet's soul portrait: "${portrait.archetype}" — painted by VERSA. What's yours?`,
-              )}`}
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText(portrait))}`}
               target="_blank"
               rel="noreferrer"
             >
               Share on X
             </a>
+            <button className="btn btn-ghost" onClick={download} disabled={downloading}>
+              {downloading ? 'Preparing…' : 'Download image'}
+            </button>
             <button className="btn btn-ghost" onClick={onReset}>
               Portrait another wallet
             </button>
@@ -286,8 +335,32 @@ export function PortraitResult({
           line-height: 1.6;
           font-family: ui-monospace, monospace;
         }
+        .card-brand {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--ink-muted);
+          letter-spacing: 0.02em;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px dashed var(--line);
+        }
+        .brand-v {
+          display: inline-grid;
+          place-items: center;
+          width: 18px;
+          height: 18px;
+          border-radius: 5px;
+          background: var(--grad-btn);
+          color: #fff;
+          font-size: 11px;
+          font-weight: 800;
+        }
         .card-actions {
           display: flex;
+          flex-wrap: wrap;
           gap: 12px;
           margin-top: 22px;
         }
