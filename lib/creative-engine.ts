@@ -34,7 +34,14 @@ export type SoulPortrait = {
   };
 };
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+// Base URL for the chat-completions API. Defaults to OpenAI, but can be
+// pointed at any OpenAI-compatible provider (FreeModel, Groq, Together,
+// OpenRouter, etc.) by setting OPENAI_BASE_URL. The value should be the
+// API root that exposes /v1/chat/completions — e.g.
+//   https://api.openai.com/v1   (default)
+//   https://api.freemodel.dev/v1
+const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1').replace(/\/$/, '');
+const OPENAI_URL = `${OPENAI_BASE_URL}/chat/completions`;
 const MODEL = process.env.VERSA_MODEL ?? 'gpt-4o-mini';
 const LLM_TIMEOUT_MS = 20_000;
 
