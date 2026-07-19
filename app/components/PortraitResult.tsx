@@ -49,29 +49,96 @@ export function PortraitResult({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  /** Renders the card to a PNG blob, excluding the action buttons row. */
+  const renderCardPng = async (): Promise<Blob | null> => {
+    if (!cardRef.current) return null;
+    const { toBlob } = await import('html-to-image');
+    return toBlob(cardRef.current, {
+      pixelRatio: 2,
+      backgroundColor: '#fbfcff',
+      cacheBust: true,
+      // Exclude the action row (Share/Download/Reset buttons) — those
+      // are UI, not part of the shareable artwork.
+      filter: (node) =>
+        !(node instanceof HTMLElement && node.dataset.exportExclude === 'true'),
+    });
+  };
 
   const download = async () => {
-    if (!cardRef.current || downloading) return;
+    if (downloading) return;
     setDownloading(true);
     try {
-      const { toPng } = await import('html-to-image');
-      const dataUrl = await toPng(cardRef.current, {
-        pixelRatio: 2,
-        backgroundColor: '#fbfcff',
-        cacheBust: true,
-      });
+      const blob = await renderCardPng();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       const slug = portrait ? portrait.archetype.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'portrait';
       link.download = `versa-${slug}.png`;
-      link.href = dataUrl;
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
     } catch {
-      // Downloading is a nice-to-have; fail quietly rather than
-      // interrupting a person who just wants to share on X instead.
+      // Downloading is a nice-to-have; fail quietly.
     } finally {
       setDownloading(false);
     }
   };
+
+  /**
+   * Share the portrait image + caption through the device's native share
+   * sheet (Web Share API with file support). On phones this lets people
+   * pick X/Instagram/Messages/etc. and the image arrives already
+   * attached — something no website can do via a plain link, since X's
+   * web compose intent only accepts pre-filled text, never media.
+   *
+   * Falls back to opening X's text-only compose window (with a note to
+   * attach the just-downloaded image manually) on browsers that don't
+   * support sharing files.
+   */
+  const shareNative = async () => {
+    if (!portrait || sharing) return;
+    setSharing(true);
+    try {
+      const blob = await renderCardPng();
+      const text = buildShareText(portrait);
+      const file =
+        blob && typeof File !== 'undefined'
+          ? new File([blob], 'versa-portrait.png', { type: 'image/png' })
+          : null;
+
+      if (
+        file &&
+        typeof navigator !== 'undefined' &&
+        navigator.canShare?.({ files: [file] })
+      ) {
+        await navigator.share({ text, files: [file] });
+        return;
+      }
+
+      // Fallback: no native file-sharing support (most desktop browsers).
+      // Download the image so it's ready to attach, then open the
+      // text-only X compose window.
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const slug = portrait.archetype.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        link.download = `versa-${slug}.png`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    } catch (err) {
+      // AbortError means the person just closed the share sheet — not a
+      // failure worth reacting to.
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+    } finally {
+      setSharing(false);
+    }
+  };
+
 
   return (
     <section className="result">
@@ -142,15 +209,10 @@ export function PortraitResult({
             <span className="brand-v">V</span> Made with VERSA · versa-bice.vercel.app
           </div>
 
-          <div className="card-actions">
-            <a
-              className="btn btn-primary"
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText(portrait))}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Share on X
-            </a>
+          <div className="card-actions" data-export-exclude="true">
+            <button className="btn btn-primary" onClick={shareNative} disabled={sharing}>
+              {sharing ? 'Preparing…' : 'Share on X'}
+            </button>
             <button className="btn btn-ghost" onClick={download} disabled={downloading}>
               {downloading ? 'Preparing…' : 'Download image'}
             </button>
