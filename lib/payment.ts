@@ -75,22 +75,30 @@ export const extractPaymentHeader = (request: Request): string | null =>
 
 type FacilitatorResult = { ok: boolean; detail: string };
 
+// Confirmed from OKX's Onchain OS payment API docs (api-http-batch /
+// api-http-exact reference): base URL, path prefix, and response
+// envelope shape. All endpoints require API Key authentication.
+const OKX_X402_BASE = 'https://web3.okx.com/api/v6/pay/x402';
+
 const facilitatorCall = async (
   path: 'verify' | 'settle',
   paymentHeader: string,
   requirements: PaymentRequirements,
 ): Promise<FacilitatorResult> => {
-  const base = process.env.X402_FACILITATOR_BASE;
-  if (!base) return { ok: false, detail: 'Facilitator not configured.' };
+  const base = (process.env.X402_FACILITATOR_BASE ?? OKX_X402_BASE).replace(/\/$/, '');
+  const key = process.env.X402_FACILITATOR_KEY;
+  if (!key) return { ok: false, detail: 'Facilitator API key is not configured.' };
   try {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 10_000);
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    const key = process.env.X402_FACILITATOR_KEY;
-    if (key) headers['OK-ACCESS-KEY'] = key;
-    const res = await fetch(`${base.replace(/\/$/, '')}/${path}`, {
+    const res = await fetch(`${base}/${path}`, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        // OKX Onchain OS API key header (matches the onchainos CLI's
+        // own auth convention for web3.okx.com endpoints).
+        'OK-ACCESS-KEY': key,
+      },
       body: JSON.stringify({
         payment: paymentHeader,
         requirements: requirements.accepts[0],
@@ -100,18 +108,14 @@ const facilitatorCall = async (
     clearTimeout(t);
     const text = await res.text().catch(() => '');
     if (!res.ok) return { ok: false, detail: `${path} ${res.status}: ${text.slice(0, 160)}` };
-    // Accept common success shapes: {success:true} / {valid:true} / {ok:true} / code 0
     try {
-      const body = JSON.parse(text) as Record<string, unknown>;
-      const success =
-        body.success === true ||
-        body.valid === true ||
-        body.ok === true ||
-        body.code === 0 ||
-        body.code === '0';
+      // OKX's documented envelope: { code: "0", msg: "success", data: {...} }
+      // On business errors, code is non-"0" and data is null.
+      const body = JSON.parse(text) as { code?: string | number; msg?: string; data?: unknown };
+      const success = body.code === '0' || body.code === 0;
       return success
         ? { ok: true, detail: `${path} ok` }
-        : { ok: false, detail: `${path} rejected: ${text.slice(0, 160)}` };
+        : { ok: false, detail: `${path} rejected (code ${body.code}): ${body.msg ?? text.slice(0, 160)}` };
     } catch {
       return { ok: false, detail: `${path} returned non-JSON.` };
     }
