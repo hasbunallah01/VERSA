@@ -27,6 +27,7 @@
 
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
+import { encodePaymentRequiredHeader } from '@okxweb3/x402-core/http';
 
 import { generatePortrait } from '@/lib/creative-engine';
 import {
@@ -131,18 +132,32 @@ const wrapped = async (request: Request): Promise<Response> => {
   // ---- x402 gate (only for the paid tool call; discovery stays free) ----
   if (paymentsEnabled() && (await isPaidToolCall(request))) {
     const requirements = buildPaymentRequirements(request.url);
+    // The marketplace/harness validates the PAYMENT-REQUIRED response
+    // header (a base64-encoded copy of the same challenge), not just the
+    // JSON body — the official SDK ships encodePaymentRequiredHeader for
+    // exactly this. Set it on every 402 alongside the body.
+    const paymentRequiredHeader = encodePaymentRequiredHeader(requirements);
     const paymentHeader = extractPaymentHeader(request);
     if (!paymentHeader) {
       return new Response(JSON.stringify(requirements), {
         status: 402,
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          'PAYMENT-REQUIRED': paymentRequiredHeader,
+        },
       });
     }
     const settled = await verifyAndSettle(paymentHeader, requirements);
     if (!settled.ok) {
       return new Response(
         JSON.stringify({ ...requirements, error: `Payment not accepted: ${settled.detail}` }),
-        { status: 402, headers: { 'content-type': 'application/json' } },
+        {
+          status: 402,
+          headers: {
+            'content-type': 'application/json',
+            'PAYMENT-REQUIRED': paymentRequiredHeader,
+          },
+        },
       );
     }
     // Paid — fall through to the MCP handler.
