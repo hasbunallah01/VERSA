@@ -48,7 +48,6 @@ export function PortraitResult({
   onReset: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
 
   /** Renders the card to a PNG blob, excluding the action buttons row. */
@@ -59,31 +58,11 @@ export function PortraitResult({
       pixelRatio: 2,
       backgroundColor: '#fbfcff',
       cacheBust: true,
-      // Exclude the action row (Share/Download/Reset buttons) — those
-      // are UI, not part of the shareable artwork.
+      // Exclude the action row (Share/Reset buttons) — those are UI,
+      // not part of the shareable artwork.
       filter: (node) =>
         !(node instanceof HTMLElement && node.dataset.exportExclude === 'true'),
     });
-  };
-
-  const download = async () => {
-    if (downloading) return;
-    setDownloading(true);
-    try {
-      const blob = await renderCardPng();
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const slug = portrait ? portrait.archetype.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'portrait';
-      link.download = `versa-${slug}.png`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // Downloading is a nice-to-have; fail quietly.
-    } finally {
-      setDownloading(false);
-    }
   };
 
   /**
@@ -212,9 +191,6 @@ export function PortraitResult({
           <div className="card-actions" data-export-exclude="true">
             <button className="btn btn-primary" onClick={shareNative} disabled={sharing}>
               {sharing ? 'Preparing…' : 'Share on X'}
-            </button>
-            <button className="btn btn-ghost" onClick={download} disabled={downloading}>
-              {downloading ? 'Preparing…' : 'Download image'}
             </button>
             <button className="btn btn-ghost" onClick={onReset}>
               Portrait another wallet
