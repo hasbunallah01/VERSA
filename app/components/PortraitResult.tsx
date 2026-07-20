@@ -36,6 +36,26 @@ const buildShareText = (p: Portrait & { address: string }): string => {
     .join(' ');
 };
 
+/** The full portrait, formatted as plain text for copying/pasting anywhere. */
+const buildCopyText = (p: Portrait & { address: string }): string =>
+  [
+    `${p.archetype}`,
+    '',
+    p.portrait,
+    '',
+    p.poem,
+    '',
+    `Palette — ${p.palette.name}: ${p.palette.colors.join(', ')}`,
+    `Traits: ${p.traits.join(', ')}`,
+    '',
+    `Wallet: ${p.address}`,
+    `Wallet age: ${p.stats.walletAgeDays != null ? `${p.stats.walletAgeDays}d` : '—'} · ` +
+      `Night owl: ${p.stats.nightOwlScore != null ? `${p.stats.nightOwlScore}%` : '—'} · ` +
+      `Tokens: ${p.stats.tokenDiversity} · NFT moves: ${p.stats.nftTransfers}`,
+    '',
+    'Made with VERSA · versa-bice.vercel.app',
+  ].join('\n');
+
 export function PortraitResult({
   loading,
   error,
@@ -49,6 +69,19 @@ export function PortraitResult({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = async () => {
+    if (!portrait) return;
+    try {
+      await navigator.clipboard.writeText(buildCopyText(portrait));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can fail (permissions, insecure context); fail
+      // quietly rather than showing an error for a nice-to-have action.
+    }
+  };
 
   /** Renders the card to a PNG blob, excluding the action buttons row. */
   const renderCardPng = async (): Promise<Blob | null> => {
@@ -191,6 +224,9 @@ export function PortraitResult({
           <div className="card-actions" data-export-exclude="true">
             <button className="btn btn-primary" onClick={shareNative} disabled={sharing}>
               {sharing ? 'Preparing…' : 'Share on X'}
+            </button>
+            <button className="btn btn-ghost" onClick={copyToClipboard}>
+              {copied ? 'Copied ✓' : 'Copy'}
             </button>
             <button className="btn btn-ghost" onClick={onReset}>
               Portrait another wallet
