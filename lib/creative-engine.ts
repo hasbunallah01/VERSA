@@ -143,7 +143,28 @@ export const generatePortrait = async (
       const text = await res.text().catch(() => '');
       return { ok: false, reason: `Creative engine error (${res.status}). ${text.slice(0, 120)}` };
     }
-    const body = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const body = (await res.json()) as {
+      model?: string;
+      choices?: Array<{ message?: { content?: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+    };
+
+    // Log token usage to stdout — visible in Vercel's function logs — so
+    // cost per call can be checked without needing the OpenAI dashboard.
+    // Cross-check `model` here against what was actually billed: it may
+    // differ from the requested MODEL if the provider auto-routes
+    // (observed with some OpenAI-compatible proxies).
+    console.log(
+      '[creative-engine] usage',
+      JSON.stringify({
+        requestedModel: MODEL,
+        billedModel: body.model ?? 'unknown',
+        promptTokens: body.usage?.prompt_tokens ?? null,
+        completionTokens: body.usage?.completion_tokens ?? null,
+        totalTokens: body.usage?.total_tokens ?? null,
+      }),
+    );
+
     const content = body.choices?.[0]?.message?.content ?? '';
     let parsed: unknown;
     try {
