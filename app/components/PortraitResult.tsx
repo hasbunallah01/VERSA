@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 
+import { ShareCard } from './ShareCard';
+
 export type Portrait = {
   archetype: string;
   portrait: string;
@@ -68,6 +70,7 @@ export function PortraitResult({
   onReset: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const shareCardRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -83,18 +86,19 @@ export function PortraitResult({
     }
   };
 
-  /** Renders the card to a PNG blob, excluding the action buttons row. */
+  /**
+   * Renders the dedicated ShareCard (off-screen, fixed 1080×1350) to a
+   * PNG blob — NOT the long on-site card. This is the beautiful, compact
+   * image that gets shared/attached.
+   */
   const renderCardPng = async (): Promise<Blob | null> => {
-    if (!cardRef.current) return null;
+    if (!shareCardRef.current) return null;
     const { toBlob } = await import('html-to-image');
-    return toBlob(cardRef.current, {
-      pixelRatio: 2,
-      backgroundColor: '#fbfcff',
+    return toBlob(shareCardRef.current, {
+      pixelRatio: 1, // the card is already rendered at full 1080×1350
       cacheBust: true,
-      // Exclude the action row (Share/Reset buttons) — those are UI,
-      // not part of the shareable artwork.
-      filter: (node) =>
-        !(node instanceof HTMLElement && node.dataset.exportExclude === 'true'),
+      width: 1080,
+      height: 1350,
     });
   };
 
@@ -462,6 +466,15 @@ export function PortraitResult({
           }
         }
       `}</style>
+
+      {/* Off-screen dedicated share card — snapshotted for the shared
+          image. Positioned far off-screen (not display:none, which would
+          give html-to-image nothing to measure). */}
+      {portrait && (
+        <div style={{ position: 'fixed', left: -20000, top: 0, pointerEvents: 'none' }} aria-hidden="true">
+          <ShareCard ref={shareCardRef} portrait={portrait} />
+        </div>
+      )}
     </section>
   );
 }
