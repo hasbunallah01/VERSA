@@ -32,6 +32,7 @@ import { encodePaymentRequiredHeader } from '@okxweb3/x402-core/http';
 import { generatePortrait } from '@/lib/creative-engine';
 import {
   buildPaymentRequirements,
+  buildPaymentResponseHeader,
   extractPaymentHeader,
   paymentsEnabled,
   verifyAndSettle,
@@ -130,6 +131,11 @@ const isPaidToolCall = async (request: Request): Promise<boolean> => {
 
 const wrapped = async (request: Request): Promise<Response> => {
   // ---- x402 gate (only for the paid tool call; discovery stays free) ----
+  // paymentResponseHeader, once set, must be attached to the FINAL
+  // successful response below — it's the settlement proof the seller
+  // contract requires on every response after a paid call completes.
+  let paymentResponseHeader: string | null = null;
+
   if (paymentsEnabled() && (await isPaidToolCall(request))) {
     const requirements = buildPaymentRequirements(request.url);
     // The marketplace/harness validates the PAYMENT-REQUIRED response
@@ -160,7 +166,9 @@ const wrapped = async (request: Request): Promise<Response> => {
         },
       );
     }
-    // Paid — fall through to the MCP handler.
+    // Paid — carry the settlement proof through to the final response,
+    // then fall through to the MCP handler.
+    paymentResponseHeader = buildPaymentResponseHeader(settled.settleResponse);
   }
 
   // ---- Accept tolerance ----
@@ -180,9 +188,18 @@ const wrapped = async (request: Request): Promise<Response> => {
 
   const res = await handler(proxied);
 
-  if (clientWantsSse) return res;
+  // Attach the settlement proof header to whatever response comes back,
+  // whether or not it goes through the SSE-unwrapping path below.
+  const withPaymentResponse = (r: Response): Response => {
+    if (!paymentResponseHeader) return r;
+    const h = new Headers(r.headers);
+    h.set('PAYMENT-RESPONSE', paymentResponseHeader);
+    return new Response(r.body, { status: r.status, headers: h });
+  };
+
+  if (clientWantsSse) return withPaymentResponse(res);
   const contentType = res.headers.get('content-type') ?? '';
-  if (!contentType.includes('text/event-stream')) return res;
+  if (!contentType.includes('text/event-stream')) return withPaymentResponse(res);
 
   const raw = await res.text();
   const dataLines = raw
@@ -199,6 +216,7 @@ const wrapped = async (request: Request): Promise<Response> => {
       ...(res.headers.get('mcp-session-id')
         ? { 'mcp-session-id': res.headers.get('mcp-session-id') as string }
         : {}),
+      ...(paymentResponseHeader ? { 'PAYMENT-RESPONSE': paymentResponseHeader } : {}),
     },
   });
 };

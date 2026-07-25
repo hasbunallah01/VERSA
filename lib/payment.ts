@@ -33,8 +33,8 @@
  */
 
 import { OKXFacilitatorClient } from '@okxweb3/x402-core/facilitator';
-import { decodePaymentSignatureHeader } from '@okxweb3/x402-core/http';
-import type { Network, PaymentPayload, PaymentRequirements } from '@okxweb3/x402-core/types';
+import { decodePaymentSignatureHeader, encodePaymentResponseHeader } from '@okxweb3/x402-core/http';
+import type { Network, PaymentPayload, PaymentRequirements, SettleResponse } from '@okxweb3/x402-core/types';
 
 export type PaymentRequired = {
   x402Version: number;
@@ -99,12 +99,17 @@ const getClient = (): OKXFacilitatorClient | null => {
   return cachedClient;
 };
 
-type Result = { ok: boolean; detail: string };
+type Result =
+  | { ok: true; settleResponse: SettleResponse }
+  | { ok: false; detail: string };
 
 /**
  * Decode the payment header into a PaymentPayload, then verify and
- * settle it with OKX's facilitator. Returns ok=true only once both
- * steps succeed.
+ * settle it with OKX's facilitator. Returns the full SettleResponse on
+ * success — the caller must encode this into a PAYMENT-RESPONSE header
+ * on the final (200) response, per OKX's documented seller contract:
+ * "replay after signing → 200, with the response carrying
+ * PAYMENT-RESPONSE settlement proof."
  */
 export const verifyAndSettle = async (
   paymentHeader: string,
@@ -139,10 +144,18 @@ export const verifyAndSettle = async (
   try {
     const settleResult = await client.settle(payload, paymentRequirements);
     if (settleResult.status === 'success' || settleResult.status === 'pending' || settleResult.success) {
-      return { ok: true, detail: `settle ${settleResult.status ?? 'ok'}` };
+      return { ok: true, settleResponse: settleResult };
     }
     return { ok: false, detail: `settle rejected: ${settleResult.errorReason ?? 'unknown reason'}` };
   } catch (error) {
     return { ok: false, detail: error instanceof Error ? `settle failed: ${error.message}` : 'settle failed.' };
   }
 };
+
+/**
+ * Encodes a successful SettleResponse as the base64 PAYMENT-RESPONSE
+ * header value, per OKX's seller contract. Must be attached to every
+ * response returned after a successfully settled payment.
+ */
+export const buildPaymentResponseHeader = (settleResponse: SettleResponse): string =>
+  encodePaymentResponseHeader(settleResponse);
