@@ -130,6 +130,58 @@ const isPaidToolCall = async (request: Request): Promise<boolean> => {
 };
 
 const wrapped = async (request: Request): Promise<Response> => {
+  // ---- GET: the underlying MCP transport (SSE disabled) doesn't support
+  // GET at all and would 405. Some buyer/checker tooling probes with a
+  // plain GET first — answer with a helpful usage response instead of a
+  // bare 405, same tolerance principle as the Accept-header fix below. ----
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    return new Response(
+      JSON.stringify({
+        name: 'VERSA — An Autonomous On-Chain Portrait Artist',
+        protocol: 'MCP (JSON-RPC 2.0) over POST',
+        usage: 'POST JSON-RPC 2.0 requests here. Methods: initialize, tools/list, tools/call.',
+        tool: {
+          name: 'generate_portrait',
+          input: { address: 'string (required, 0x EVM address)', style: 'poetic|mystic|degen|noir (optional)' },
+        },
+        payment: paymentsEnabled()
+          ? { scheme: 'x402', price: '0.05 USDT0', network: 'eip155:196' }
+          : { scheme: 'none', note: 'free during testing' },
+        example: {
+          method: 'POST',
+          body: { jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} },
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  }
+
+  // ---- POST with an empty or non-JSON-RPC body: some buyer/checker
+  // tooling probes with an empty POST before sending a real call. Answer
+  // with the same usage info (200) rather than letting a malformed body
+  // reach the strict handler and produce a bare 400/415. ----
+  type JsonRpcBody = { jsonrpc?: string; method?: string };
+  let parsedBody: JsonRpcBody | null = null;
+  try {
+    parsedBody = (await request.clone().json()) as JsonRpcBody;
+  } catch {
+    parsedBody = null;
+  }
+  if (!parsedBody || typeof parsedBody.method !== 'string') {
+    return new Response(
+      JSON.stringify({
+        name: 'VERSA — An Autonomous On-Chain Portrait Artist',
+        protocol: 'MCP (JSON-RPC 2.0) over POST',
+        usage: 'Send a JSON-RPC 2.0 body, e.g. {"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}',
+        tool: {
+          name: 'generate_portrait',
+          input: { address: 'string (required, 0x EVM address)', style: 'poetic|mystic|degen|noir (optional)' },
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  }
+
   // ---- x402 gate (only for the paid tool call; discovery stays free) ----
   // paymentResponseHeader, once set, must be attached to the FINAL
   // successful response below — it's the settlement proof the seller
@@ -177,6 +229,10 @@ const wrapped = async (request: Request): Promise<Response> => {
 
   const headers = new Headers(request.headers);
   headers.set('accept', COMPLIANT_ACCEPT);
+  // Force a correct Content-Type regardless of what the caller sent — a
+  // missing or non-JSON Content-Type is a plausible cause of a bare 415
+  // from the underlying handler even when the body itself is valid JSON.
+  headers.set('content-type', 'application/json');
   const proxied = new Request(request.url, {
     method: request.method,
     headers,
