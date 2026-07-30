@@ -119,11 +119,14 @@ const COMPLIANT_ACCEPT = 'application/json, text/event-stream';
 const isPaidToolCall = async (request: Request): Promise<boolean> => {
   if (request.method !== 'POST') return false;
   try {
-    const body = (await request.clone().json()) as {
-      method?: string;
-      params?: { name?: string };
-    };
-    return body.method === 'tools/call' && body.params?.name === 'generate_portrait';
+    const body = (await request.clone().json()) as { method?: string };
+    // generate_portrait is the ONLY tool this server exposes, so any
+    // tools/call requires payment — matching on an exact tool-name string
+    // was fragile: a checker/buyer sending a slightly different params
+    // shape (different casing, nesting, or field name) would silently
+    // skip the gate and fall through to a free 200, which is exactly the
+    // failure a live x402 validation check surfaced.
+    return body.method === 'tools/call';
   } catch {
     return false;
   }
